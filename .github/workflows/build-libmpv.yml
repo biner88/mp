@@ -46,8 +46,8 @@ jobs:
       - name: Collect artifact
         run: meson install -C mingw_build --destdir "$GITHUB_WORKSPACE/artifact"
 
-      - uses: actions/upload-artifact@7
-        with:
+      - uses: actions/upload-artifact@v7
+        with:artifact
           name: libmpv-windows-x64
           path: artifact
 
