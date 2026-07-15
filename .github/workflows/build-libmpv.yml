@@ -47,7 +47,7 @@ jobs:
         run: |
           mkdir -p artifact/include/mpv
           cp mingw_build/libmpv-2.dll mingw_build/libmpv.dll.a artifact/
-          cp libmpv/*.h artifact/include/mpv/
+          cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -74,7 +74,7 @@ jobs:
         run: |
           mkdir -p artifact/lib artifact/include/mpv
           cp -a build/libmpv.so* artifact/lib/
-          cp libmpv/*.h artifact/include/mpv/
+          cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v4
         with:
