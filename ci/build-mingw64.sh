@@ -239,6 +239,8 @@ _spirv_cross () {
     sed 's/-lspirv-cross-c$/-lspirv-cross-c -lspirv-cross-cpp -lspirv-cross-reflect -lspirv-cross-msl -lspirv-cross-hlsl -lspirv-cross-glsl -lspirv-cross-core/' \
         "$prefix_dir/lib/pkgconfig/spirv-cross-c.pc" \
         >"$prefix_dir/lib/pkgconfig/spirv-cross-c-shared.pc"
+    sed -i "s|^Libs:.*|& $($TARGET-g++-posix -print-file-name=libstdc++.a)|" \
+        "$prefix_dir/lib/pkgconfig/spirv-cross-c-shared.pc"
 }
 _spirv_cross_mark=lib/libspirv-cross-c.a
 
