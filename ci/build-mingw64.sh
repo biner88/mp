@@ -27,7 +27,7 @@ export NM=$TARGET-nm
 export RANLIB=$TARGET-ranlib
 
 export CFLAGS="-O2 -pipe -Wall"
-export LDFLAGS="-fstack-protector-strong"
+export LDFLAGS="-fstack-protector-strong -static-libgcc -static-libstdc++"
 
 . ./ci/build-common.sh
 
@@ -40,7 +40,7 @@ export PKG_CONFIG_SYSROOT_DIR="$prefix_dir"
 export PKG_CONFIG_LIBDIR="$PKG_CONFIG_SYSROOT_DIR/lib/pkgconfig"
 
 # autotools(-like)
-at_flags="--disable-static --enable-shared"
+at_flags="--enable-static --disable-shared"
 
 # meson
 fam=x86_64
@@ -49,7 +49,8 @@ cat >"$prefix_dir/crossfile" <<EOF
 [built-in options]
 buildtype = 'release'
 wrap_mode = 'nodownload'
-default_library = 'shared'
+default_library = 'static'
+prefer_static = true
 [binaries]
 c = ['ccache', '${CC}']
 cpp = ['ccache', '${CXX}']
@@ -80,7 +81,7 @@ cmake_args=(
     -DCMAKE_RC_COMPILER="${TARGET}-windres"
     -DCMAKE_ASM_COMPILER="$AS"
     -DCMAKE_BUILD_TYPE=Release
-    -DBUILD_SHARED_LIBS=ON
+    -DBUILD_SHARED_LIBS=OFF
 )
 
 export CC="ccache $CC"
@@ -153,7 +154,7 @@ _iconv () {
     makeplusinstall
     popd
 }
-_iconv_mark=lib/libiconv.dll.a
+_iconv_mark=lib/libiconv.a
 
 _zlib_ng () {
     local ver=2.3.3
@@ -163,9 +164,8 @@ _zlib_ng () {
         -DZLIB_COMPAT=ON -DBUILD_TESTING=OFF
     makeplusinstall
     popd
-    ln -snf libzlib.dll.a "$prefix_dir/lib/libz.dll.a" # see zlib-ng/zlib-ng#1864
 }
-_zlib_ng_mark=lib/libzlib.dll.a
+_zlib_ng_mark=lib/libz.a
 
 _dav1d () {
     [ -d dav1d ] || $gitclone https://code.videolan.org/videolan/dav1d.git
@@ -175,7 +175,7 @@ _dav1d () {
     makeplusinstall
     popd
 }
-_dav1d_mark=lib/libdav1d.dll.a
+_dav1d_mark=lib/libdav1d.a
 
 _lcms2 () {
     [ -d lcms2 ] || $gitclone https://github.com/mm2/Little-CMS.git lcms2
@@ -185,7 +185,7 @@ _lcms2 () {
     makeplusinstall
     popd
 }
-_lcms2_mark=lib/liblcms2.dll.a
+_lcms2_mark=lib/liblcms2.a
 
 _amf_headers () {
     local ver=1.5.2
@@ -201,7 +201,8 @@ _ffmpeg () {
     [ -d ffmpeg ] || $gitclone https://github.com/FFmpeg/FFmpeg.git ffmpeg
     builddir ffmpeg
     local args=(
-        --pkg-config=pkg-config --target-os=mingw32 --enable-gpl
+        --pkg-config=pkg-config --pkg-config-flags=--static
+        --target-os=mingw32 --enable-gpl
         --enable-cross-compile --cross-prefix=$TARGET- --arch=${TARGET%%-*}
         --cc="$CC" --cxx="$CXX" $at_flags
         --disable-{doc,programs}
@@ -212,7 +213,7 @@ _ffmpeg () {
     makeplusinstall
     popd
 }
-_ffmpeg_mark=lib/libavcodec.dll.a
+_ffmpeg_mark=lib/libavcodec.a
 
 _shaderc () {
     if [ ! -d shaderc ]; then
@@ -225,17 +226,20 @@ _shaderc () {
     makeplusinstall
     popd
 }
-_shaderc_mark=lib/libshaderc_shared.dll.a
+_shaderc_mark=lib/libshaderc.a
 
 _spirv_cross () {
     [ -d SPIRV-Cross ] || $gitclone https://github.com/KhronosGroup/SPIRV-Cross
     builddir SPIRV-Cross
     cmake .. "${cmake_args[@]}" \
-        -DSPIRV_CROSS_SHARED=ON -DSPIRV_CROSS_{CLI,STATIC}=OFF
+        -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_STATIC=ON
     makeplusinstall
     popd
+    sed 's/-lspirv-cross-c$/-lspirv-cross-c -lspirv-cross-cpp -lspirv-cross-reflect -lspirv-cross-msl -lspirv-cross-hlsl -lspirv-cross-glsl -lspirv-cross-core/' \
+        "$prefix_dir/lib/pkgconfig/spirv-cross-c.pc" \
+        >"$prefix_dir/lib/pkgconfig/spirv-cross-c-shared.pc"
 }
-_spirv_cross_mark=lib/libspirv-cross-c-shared.dll.a
+_spirv_cross_mark=lib/libspirv-cross-c.a
 
 _nv_headers () {
     [ -d nv-codec-headers ] || $gitclone https://github.com/FFmpeg/nv-codec-headers
@@ -257,7 +261,7 @@ _vulkan_headers_mark=include/vulkan/vulkan.h
 _vulkan_loader () {
     [ -d Vulkan-Loader ] || $gitclone https://github.com/KhronosGroup/Vulkan-Loader
     builddir Vulkan-Loader
-    cmake .. "${cmake_args[@]}" -DUSE_GAS=ON
+    cmake .. "${cmake_args[@]}" -DBUILD_SHARED_LIBS=ON -DUSE_GAS=ON
     makeplusinstall
     popd
 }
@@ -271,7 +275,7 @@ _libplacebo () {
     makeplusinstall
     popd
 }
-_libplacebo_mark=lib/libplacebo.dll.a
+_libplacebo_mark=lib/libplacebo.a
 
 _freetype () {
     local ver=2.14.3
@@ -281,7 +285,7 @@ _freetype () {
     makeplusinstall
     popd
 }
-_freetype_mark=lib/libfreetype.dll.a
+_freetype_mark=lib/libfreetype.a
 
 _fribidi () {
     local ver=1.0.16
@@ -292,7 +296,7 @@ _fribidi () {
     makeplusinstall
     popd
 }
-_fribidi_mark=lib/libfribidi.dll.a
+_fribidi_mark=lib/libfribidi.a
 
 _harfbuzz () {
     local ver=14.2.0
@@ -303,7 +307,7 @@ _harfbuzz () {
     makeplusinstall
     popd
 }
-_harfbuzz_mark=lib/libharfbuzz.dll.a
+_harfbuzz_mark=lib/libharfbuzz.a
 
 _libass () {
     [ -d libass ] || $gitclone https://github.com/libass/libass.git
@@ -312,7 +316,7 @@ _libass () {
     makeplusinstall
     popd
 }
-_libass_mark=lib/libass.dll.a
+_libass_mark=lib/libass.a
 
 _luajit () {
     [ -d LuaJIT ] || $gitclone https://github.com/LuaJIT/LuaJIT.git
@@ -332,9 +336,10 @@ _luajit () {
 _luajit_mark=lib/libluajit-5.1.a
 
 _subrandr () {
-    build_subrandr "$prefix_dir" --target "$RUST_TARGET" -- -- -L"$prefix_dir"/lib
+    build_subrandr "$prefix_dir" --target "$RUST_TARGET" \
+        --static-library true --shared-library false -- -- -L"$prefix_dir"/lib
 }
-_subrandr_mark=lib/libsubrandr.dll.a
+_subrandr_mark=lib/libsubrandr.a
 
 _curl () {
     local ver=8.20.0
@@ -345,7 +350,7 @@ _curl () {
     makeplusinstall
     popd
 }
-_curl_mark=lib/libcurl.dll.a
+_curl_mark=lib/libcurl.a
 
 for x in iconv zlib-ng shaderc spirv-cross amf-headers nv-headers dav1d lcms2; do
     build_if_missing $x
@@ -377,6 +382,7 @@ rm -rf $build
 mpv_args=(
     --cross-file "$prefix_dir/crossfile" $common_args
     --buildtype debugoptimized
+    -Ddefault_library=shared
     --force-fallback-for=mujs
     -Dmujs:werror=false
     -Dmujs:default_library=static
