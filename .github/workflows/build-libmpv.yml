@@ -46,7 +46,7 @@ jobs:
       - name: Collect artifact
         run: |
           mkdir -p artifact/include/mpv
-          cp mingw_build/libmpv-2.dll mingw_build/libmpv.dll.a artifact/
+          cp mingw_build/*mpv*.dll* artifact/
           cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v4
