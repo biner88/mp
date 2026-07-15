@@ -1,0 +1,82 @@
+name: Build libmpv
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: ubuntu-24.04
+    env:
+      TARGET: x86_64-w64-mingw32
+      RUST_TARGET: x86_64-pc-windows-gnu
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      DOWNLOAD_CACHE: ${{ github.workspace }}/.ccache/downloads
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: libmpv-windows-x64-${{ hashFiles('ci/build-mingw64.sh') }}
+          restore-keys: libmpv-windows-x64-
+
+      - name: Install build tools
+        run: |
+          rustup target add "$RUST_TARGET"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            ccache g++-mingw-w64 nasm ninja-build pkgconf wine64
+          python -m pip install meson
+
+      - name: Download Meson dependencies
+        run: |
+          mkdir -p subprojects
+          meson wrap install mujs
+          meson subprojects download
+
+      - name: Build dependencies
+        run: ./ci/build-mingw64.sh
+
+      - name: Build libmpv
+        run: ./ci/build-mingw64.sh meson
+
+      - name: Collect artifact
+        run: |
+          mkdir -p artifact/include/mpv
+          cp mingw_build/libmpv-2.dll mingw_build/libmpv.dll.a artifact/
+          cp libmpv/*.h artifact/include/mpv/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libmpv-windows-x64
+          path: artifact
+
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-latest
+    container: registry.opensuse.org/home/mia/images/images/mpv-ci:stable-deps
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build libmpv
+        run: |
+          meson setup build \
+            --buildtype=release \
+            -Dlibmpv=true \
+            -Dcplayer=false \
+            -Dtests=false
+          meson compile -C build
+
+      - name: Collect artifact
+        run: |
+          mkdir -p artifact/lib artifact/include/mpv
+          cp -a build/libmpv.so* artifact/lib/
+          cp libmpv/*.h artifact/include/mpv/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libmpv-linux-x64
+          path: artifact
