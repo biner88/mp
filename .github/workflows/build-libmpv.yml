@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: libmpv-windows-x64-${{ hashFiles('ci/build-mingw64.sh') }}
@@ -41,15 +41,12 @@ jobs:
         run: bash ./ci/build-mingw64.sh
 
       - name: Build libmpv
-        run: bash ./ci/build-mingw64.sh meson
+        run: bash ./ci/build-mingw64.sh libmpv
 
       - name: Collect artifact
-        run: |
-          mkdir -p artifact/include/mpv
-          cp mingw_build/*mpv*.dll* artifact/
-          cp include/mpv/*.h artifact/include/mpv/
+        run: meson install -C mingw_build --destdir "$GITHUB_WORKSPACE/artifact"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@7
         with:
           name: libmpv-windows-x64
           path: artifact
@@ -76,7 +73,7 @@ jobs:
           cp -a build/libmpv.so* artifact/lib/
           cp include/mpv/*.h artifact/include/mpv/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: libmpv-linux-x64
           path: artifact

@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/bin/bash
+set -e
 
 prefix_dir=$PWD/mingw_prefix
 mkdir -p "$prefix_dir"
@@ -382,6 +383,7 @@ mpv_args=(
     -Dlua=luajit
     -D{amf,shaderc,spirv-cross,d3d11,javascript,libcurl}=enabled
 )
+[[ "$1" == libmpv ]] && mpv_args+=( -Dcplayer=false )
 meson setup $build "${mpv_args[@]}"
 meson compile -C $build
 
