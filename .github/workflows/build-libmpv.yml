@@ -38,10 +38,10 @@ jobs:
           meson subprojects download
 
       - name: Build dependencies
-        run: ./ci/build-mingw64.sh
+        run: bash ./ci/build-mingw64.sh
 
       - name: Build libmpv
-        run: ./ci/build-mingw64.sh meson
+        run: bash ./ci/build-mingw64.sh meson
 
       - name: Collect artifact
         run: |
