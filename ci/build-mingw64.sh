@@ -13,6 +13,7 @@ if [[ -z "$TARGET" || -z "$RUST_TARGET" ]]; then
     echo "Error: must set TARGET and RUST_TARGET" >&2
     exit 1
 fi
+ln -snf "/usr/$TARGET" "$prefix_dir/$TARGET"
 if ! command -v pkg-config >/dev/null; then
     echo "Error: missing pkg-config" >&2
     exit 1
@@ -389,7 +390,7 @@ mpv_args=(
     -Dlua=luajit
     -D{amf,shaderc,spirv-cross,d3d11,javascript,libcurl}=enabled
 )
-[[ "$1" == libmpv ]] && mpv_args+=( -Dcplayer=false )
+[[ "$1" == libmpv ]] && mpv_args+=( -Dcplayer=false -Dtests=false )
 meson setup $build "${mpv_args[@]}"
 meson compile -C $build
 
