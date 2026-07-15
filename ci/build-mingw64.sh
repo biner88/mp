@@ -332,6 +332,7 @@ _luajit () {
     make TARGET_SYS=Windows HOST_CC="$hostcc" CROSS="ccache $TARGET-" \
         BUILDMODE=static $flags amalg
     make DESTDIR="$prefix_dir" INSTALL_DEP= FILE_T=luajit.exe install
+    sed -i 's/ -Wl,-E -ldl//g' "$prefix_dir/lib/pkgconfig/luajit.pc"
     popd
 }
 _luajit_mark=lib/libluajit-5.1.a
