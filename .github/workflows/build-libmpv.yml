@@ -84,7 +84,7 @@ jobs:
       - name: Collect artifact
         run: |
           mkdir -p artifact/lib artifact/include/mpv
-          cp -a linux_build/libmpv.so* artifact/lib/
+          find linux_build -maxdepth 1 -name 'libmpv.so*' ! -type d -exec cp -a {} artifact/lib/ \;
           cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v7
