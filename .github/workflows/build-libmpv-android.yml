@@ -14,6 +14,7 @@ permissions:
   contents: read
 
 env:
+  NDK_VERSION: 28.2.13676358
   FFMPEG_VERSION: n6.1.2
   LIBPLACEBO_VERSION: '7.360.1'
 
@@ -37,7 +38,7 @@ jobs:
           path: |
             android-build/buildscripts/deps
             android-build/buildscripts/prefix
-          key: libmpv-android-deps-${{ env.FFMPEG_VERSION }}-${{ env.LIBPLACEBO_VERSION }}-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
+          key: libmpv-android-deps-${{ env.NDK_VERSION }}-${{ env.FFMPEG_VERSION }}-${{ env.LIBPLACEBO_VERSION }}-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
 
       - uses: actions/setup-java@v5
         with:
@@ -56,6 +57,7 @@ jobs:
         run: |
           mkdir -p sdk
           ln -s "$ANDROID_HOME" sdk/android-sdk-linux
+          sed -i "s/^v_ndk=.*/v_ndk=$NDK_VERSION/" include/depinfo.sh
           TRAVIS=1 ./download.sh
           cp flavors/default.sh scripts/ffmpeg.sh
           cat >scripts/libplacebo.sh <<'LIBPLACEBO'
