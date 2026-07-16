@@ -15,6 +15,7 @@ permissions:
 
 env:
   FFMPEG_VERSION: n6.1.2
+  LIBPLACEBO_VERSION: '7.360.1'
 
 jobs:
   android:
@@ -36,7 +37,7 @@ jobs:
           path: |
             android-build/buildscripts/deps
             android-build/buildscripts/prefix
-          key: libmpv-android-deps-${{ env.FFMPEG_VERSION }}-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
+          key: libmpv-android-deps-${{ env.FFMPEG_VERSION }}-${{ env.LIBPLACEBO_VERSION }}-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
 
       - uses: actions/setup-java@v5
         with:
@@ -57,6 +58,30 @@ jobs:
           ln -s "$ANDROID_HOME" sdk/android-sdk-linux
           TRAVIS=1 ./download.sh
           cp flavors/default.sh scripts/ffmpeg.sh
+          cat >scripts/libplacebo.sh <<'LIBPLACEBO'
+          #!/bin/bash -e
+          . "$BUILDSCRIPTS_ROOT/include/depinfo.sh"
+          . "$BUILDSCRIPTS_ROOT/include/path.sh"
+          build=_build$ndk_suffix
+          if [ "$1" = clean ]; then
+            rm -rf "$build"
+            exit 0
+          fi
+          [ "$1" = build ] || exit 255
+          meson setup "$build" --cross-file "$prefix_dir/crossfile.txt" \
+            -Dvulkan=disabled -Dopengl=disabled -Dd3d11=disabled \
+            -Dglslang=disabled -Dshaderc=disabled -Dlcms=disabled \
+            -Ddovi=disabled -Dlibdovi=disabled -Ddemos=false -Dtests=false \
+            -Dbench=false -Dfuzz=false -Dunwind=disabled -Dxxhash=disabled
+          ninja -C "$build" -j"$cores"
+          DESTDIR="$prefix_dir" ninja -C "$build" install
+          LIBPLACEBO
+          sed -i "/v_libass=/a v_libplacebo=$LIBPLACEBO_VERSION" include/depinfo.sh
+          sed -i '/dep_libass=/a dep_libplacebo=()' include/depinfo.sh
+          sed -i 's/dep_mpv=(ffmpeg libass/dep_mpv=(ffmpeg libass libplacebo/' include/depinfo.sh
+          test -d deps/libplacebo || \
+            git clone --depth 1 --branch "v$LIBPLACEBO_VERSION" --recursive \
+              https://code.videolan.org/videolan/libplacebo.git deps/libplacebo
           git -C deps/ffmpeg fetch --depth 1 origin tag "$FFMPEG_VERSION"
           git -C deps/ffmpeg reset --hard "$FFMPEG_VERSION"
           for patch in patches/ffmpeg/*.patch; do
