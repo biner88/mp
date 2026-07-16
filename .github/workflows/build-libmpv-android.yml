@@ -9,6 +9,7 @@ on:
       - .github/workflows/build-libmpv-darwin.yml
       - ci/build-ios.sh
       - ci/build-mingw64.sh
+      - ci/build-linux.sh
 
 permissions:
   contents: read
