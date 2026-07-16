@@ -124,6 +124,12 @@ jobs:
           ref: b4e3ce98826cd4a28f6121b29f56ea203346e6e3
           path: libmpv-darwin-build
 
+      - name: Patch HarfBuzz for iOS
+        run: |
+          sed -i.bak '/-Dfuzzer_ldflags=/a\
+              sed -i.bak '\''/#define HAVE_SINCOSF 1/d'\'' build/config.h
+          ' libmpv-darwin-build/nix/packages/mk-pkg-harfbuzz/default.nix
+
       - uses: DeterminateSystems/nix-installer-action@v22
         with:
           extra-conf: |
