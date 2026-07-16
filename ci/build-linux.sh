@@ -10,7 +10,7 @@ mkdir -p "$prefix" "$sources" "$builds"
 export CFLAGS="-O3 -fPIC -pipe"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-L$prefix/lib -static-libgcc -static-libstdc++"
-export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+export PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$prefix/share/pkgconfig"
 export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
 clone() {
@@ -44,6 +44,7 @@ if [ ! -f "$prefix/lib/libz.a" ]; then
     clone https://github.com/madler/zlib.git zlib v1.3.1
     cmake_build "$sources/zlib" zlib -DZLIB_BUILD_TESTING=OFF
 fi
+rm -f "$prefix"/lib/libz.so*
 
 if [ ! -f "$prefix/lib/libmbedtls.a" ]; then
     clone https://github.com/Mbed-TLS/mbedtls.git mbedtls mbedtls-3.6.4
@@ -66,6 +67,7 @@ if [ ! -f "$prefix/lib/libavcodec.a" ]; then
         --prefix="$prefix" --libdir="$prefix/lib" --incdir="$prefix/include" \
         --pkg-config-flags=--static --enable-static --disable-shared --enable-pic \
         --disable-gpl --enable-version3 --disable-doc --disable-programs \
+        --disable-vdpau --disable-xlib --disable-bzlib --enable-zlib \
         --disable-everything --enable-network \
         --enable-avutil --enable-avcodec --enable-avfilter --enable-avformat \
         --enable-swscale --enable-swresample --enable-libdav1d --enable-mbedtls \
@@ -86,7 +88,7 @@ fi
 
 if [ ! -f "$prefix/lib/libfreetype.a" ]; then
     clone https://gitlab.freedesktop.org/freetype/freetype.git freetype VER-2-14-3
-    meson_build "$sources/freetype" freetype
+    meson_build "$sources/freetype" freetype -Dbzip2=disabled
 fi
 
 if [ ! -f "$prefix/lib/libfribidi.a" ]; then
@@ -152,7 +154,7 @@ meson compile -C linux_build mpv
 strip --strip-unneeded linux_build/libmpv.so
 
 needed="$(readelf -d linux_build/libmpv.so | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')"
-unexpected="$(printf '%s\n' "$needed" | grep -Ev '^lib(c|m|pthread|dl|rt|resolv|util)\.so(\..*)?$' || true)"
+unexpected="$(printf '%s\n' "$needed" | grep -Ev '^(lib(c|m|pthread|dl|rt|resolv|util)\.so(\..*)?|ld-linux[^/]*\.so(\..*)?)$' || true)"
 if [ -n "$unexpected" ]; then
     printf 'Non-system shared dependencies remain:\n%s\n' "$unexpected" >&2
     exit 1
