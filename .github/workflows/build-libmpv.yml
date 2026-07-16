@@ -68,6 +68,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install build tools
+        run: zypper --non-interactive install cmake autoconf automake libtool
+
       - uses: actions/cache@v6
         with:
           path: |
