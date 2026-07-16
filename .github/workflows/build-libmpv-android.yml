@@ -1,0 +1,77 @@
+name: Build libmpv for Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android (4 ABIs)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: media-kit/libmpv-android-video-build
+          path: android-build
+
+      - uses: actions/cache@v6
+        id: android-deps
+        with:
+          path: |
+            android-build/buildscripts/deps
+            android-build/buildscripts/prefix
+          key: libmpv-android-deps-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            autoconf automake cmake libtool meson nasm ninja-build pkgconf
+
+      - name: Prepare Android dependencies
+        working-directory: android-build/buildscripts
+        run: |
+          mkdir -p sdk
+          ln -s "$ANDROID_HOME" sdk/android-sdk-linux
+          ./include/download-deps.sh
+          rm -rf deps/mpv
+          ln -s "$GITHUB_WORKSPACE" deps/mpv
+
+      - name: Build libmpv
+        working-directory: android-build/buildscripts
+        run: |
+          if [ "${{ steps.android-deps.outputs.cache-hit }}" = true ]; then
+            ./build.sh --clean --no-deps mpv
+          else
+            ./build.sh --clean mpv
+          fi
+
+      - name: Strip and collect artifacts
+        run: |
+          mkdir -p artifact/include/mpv
+          cp include/mpv/*.h artifact/include/mpv/
+          . android-build/buildscripts/include/depinfo.sh
+          strip="$ANDROID_HOME/ndk/$v_ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+          for abi in arm64-v8a armeabi-v7a x86 x86_64; do
+            src="android-build/libmpv/src/main/jniLibs/$abi/libmpv.so"
+            test -f "$src"
+            mkdir -p "artifact/lib/$abi"
+            "$strip" --strip-all "$src" -o "artifact/lib/$abi/libmpv.so"
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libmpv-android
+          path: artifact
+          if-no-files-found: error
