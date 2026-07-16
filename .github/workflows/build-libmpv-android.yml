@@ -13,6 +13,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FFMPEG_VERSION: n6.1.2
+
 jobs:
   android:
     name: Android (4 ABIs)
@@ -33,7 +36,7 @@ jobs:
           path: |
             android-build/buildscripts/deps
             android-build/buildscripts/prefix
-          key: libmpv-android-deps-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
+          key: libmpv-android-deps-${{ env.FFMPEG_VERSION }}-${{ hashFiles('android-build/buildscripts/include/depinfo.sh', 'android-build/buildscripts/scripts/**') }}
 
       - uses: actions/setup-java@v5
         with:
@@ -54,6 +57,12 @@ jobs:
           ln -s "$ANDROID_HOME" sdk/android-sdk-linux
           TRAVIS=1 ./download.sh
           cp flavors/default.sh scripts/ffmpeg.sh
+          git -C deps/ffmpeg fetch --depth 1 origin tag "$FFMPEG_VERSION"
+          git -C deps/ffmpeg reset --hard "$FFMPEG_VERSION"
+          for patch in patches/ffmpeg/*.patch; do
+            git -C deps/ffmpeg apply --check "$PWD/$patch" 2>/dev/null && \
+              git -C deps/ffmpeg apply "$PWD/$patch" || true
+          done
           sed -i '/--prefer-static/d' scripts/mpv.sh
           sed -i '/-Dlibplacebo=disabled/d' scripts/mpv.sh
           rm -rf deps/mpv
