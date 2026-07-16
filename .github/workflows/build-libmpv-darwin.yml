@@ -124,7 +124,9 @@ jobs:
           key: libmpv-ios-dependencies-v0.7.0
 
       - name: Install build dependencies
-        run: brew install ffmpeg libass meson ninja pkg-config
+        run: |
+          brew install ffmpeg libass meson ninja pkg-config
+          python3 -m pip install --user jinja2
 
       - name: Build libmpv
         env:

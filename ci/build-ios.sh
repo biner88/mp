@@ -16,6 +16,11 @@ mkdir -p "$deps_root/xcf" "$artifact" "$download_cache"
 [ -s "$tarball" ] || curl -fL --retry 3 "$url" -o "$tarball"
 tar -xzf "$tarball" --strip-components=1 -C "$deps_root/xcf"
 
+# mpv 0.41 强制依赖 libplacebo；作为 Meson 子项目交叉静态编译，避免留下运行时未解析符号。
+rm -rf "$root/subprojects/libplacebo"
+git clone --branch v7.360.1 --depth 1 --recursive \
+    https://github.com/haasn/libplacebo.git "$root/subprojects/libplacebo"
+
 stage_deps() {
     local slice=$1 deps=$2 xcf name binary lower subdir source
     mkdir -p "$deps/lib/pkgconfig" "$deps/include"
@@ -93,8 +98,14 @@ EOF
     -Dsdl2-gamepad=disabled -Dsdl2-video=disabled -Dzimg=disabled \
     -Dvapoursynth=disabled -Dcoreaudio=disabled -Davfoundation=disabled \
     -Daudiounit=enabled -Dcocoa=disabled -Dgl-cocoa=disabled \
-    -Dgl=disabled -Dvulkan=disabled -Dlibplacebo=disabled \
-    -Dmacos-cocoa-cb=disabled \
+    -Dgl=disabled -Dvulkan=disabled -Dmacos-cocoa-cb=disabled \
+    -Dlibplacebo:vulkan=disabled -Dlibplacebo:opengl=disabled \
+    -Dlibplacebo:d3d11=disabled -Dlibplacebo:glslang=disabled \
+    -Dlibplacebo:shaderc=disabled -Dlibplacebo:lcms=disabled \
+    -Dlibplacebo:dovi=disabled -Dlibplacebo:libdovi=disabled \
+    -Dlibplacebo:demos=false -Dlibplacebo:tests=false \
+    -Dlibplacebo:bench=false -Dlibplacebo:fuzz=false \
+    -Dlibplacebo:unwind=disabled -Dlibplacebo:xxhash=disabled \
     -Dmacos-media-player=disabled -Dmacos-touchbar=disabled \
     -Dios-gl=disabled -Dvideotoolbox-gl=disabled \
     -Dlibcurl=disabled -Dx11=disabled -Dx11-clipboard=disabled \
