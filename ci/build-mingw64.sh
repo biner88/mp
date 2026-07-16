@@ -322,7 +322,7 @@ _harfbuzz () {
     gettar "https://github.com/harfbuzz/harfbuzz/releases/download/${ver}/harfbuzz-${ver}.tar.xz"
     builddir harfbuzz-${ver}
     meson setup .. --cross-file "$prefix_dir/crossfile" \
-        -Dtests=disabled
+        -D{tests,utilities,gpu,gpu_demo,vector,subset,docs}=disabled
     makeplusinstall
     popd
 }
