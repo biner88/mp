@@ -28,7 +28,7 @@ export NM=$TARGET-nm
 export RANLIB=$TARGET-ranlib
 
 export CFLAGS="-O3 -flto -pipe -Wall"
-export LDFLAGS="-flto -Wno-error=attributes -fstack-protector-strong -static-libgcc -static-libstdc++"
+export LDFLAGS="-flto -fstack-protector-strong -static-libgcc -static-libstdc++"
 
 . ./ci/build-common.sh
 
@@ -402,8 +402,9 @@ export CFLAGS LDFLAGS
 build=mingw_build
 rm -rf $build
 
+mpv_common_args=${common_args/--werror/}
 mpv_args=(
-    --cross-file "$prefix_dir/crossfile" $common_args
+    --cross-file "$prefix_dir/crossfile" $mpv_common_args
     --buildtype release
     -Dstrip=true
     -Ddefault_library=shared
