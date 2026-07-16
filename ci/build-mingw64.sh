@@ -28,7 +28,7 @@ export NM=$TARGET-nm
 export RANLIB=$TARGET-ranlib
 
 export CFLAGS="-O3 -flto -pipe -Wall"
-export LDFLAGS="-flto -fstack-protector-strong -static-libgcc -static-libstdc++"
+export LDFLAGS="-flto -fstack-protector-strong -static -static-libgcc -static-libstdc++"
 
 . ./ci/build-common.sh
 
