@@ -126,7 +126,9 @@ jobs:
       - name: Install build dependencies
         run: |
           brew install ffmpeg libass meson ninja pkg-config
-          python3 -m pip install --user jinja2
+          python3 -m venv .venv
+          .venv/bin/pip install jinja2
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Build libmpv
         env:
