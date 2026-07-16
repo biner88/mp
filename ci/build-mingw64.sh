@@ -386,7 +386,8 @@ rm -rf $build
 
 mpv_args=(
     --cross-file "$prefix_dir/crossfile" $common_args
-    --buildtype debugoptimized
+    --buildtype release
+    -Dstrip=true
     -Ddefault_library=shared
     --force-fallback-for=mujs
     -Dmujs:werror=false
