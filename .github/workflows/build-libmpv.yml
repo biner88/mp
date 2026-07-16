@@ -72,10 +72,27 @@ jobs:
         run: |
           meson setup build \
             --buildtype=release \
-            -Dlibmpv=true \
-            -Dcplayer=false \
-            -Dtests=false
+            -Ddefault_library=shared -Dprefer_static=true \
+            -Dlibmpv=true -Dcplayer=false -Dtests=false -Dgpl=false \
+            -Dcplugins=disabled -Dlua=disabled -Djavascript=disabled \
+            -Dlibarchive=disabled -Dlibbluray=disabled -Ddvdnav=disabled \
+            -Dcdda=disabled -Ddvbin=disabled -Drubberband=disabled \
+            -Dzimg=disabled -Dvapoursynth=disabled \
+            -Dsdl2-gamepad=disabled -Dsdl2-video=disabled \
+            -Diconv=disabled -Dlcms2=disabled -Duchardet=disabled \
+            -Dlibavdevice=disabled -Dlibcurl=disabled \
+            -Djack=disabled -Dopenal=disabled -Doss-audio=disabled \
+            -Dsndio=disabled -Dx11=disabled -Dx11-clipboard=disabled \
+            -Dwayland=disabled -Dvulkan=disabled \
+            -Dpipewire=enabled -Dpulse=enabled -Dalsa=enabled
           meson compile -C build
+
+          needed="$(readelf -d build/libmpv.so | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p')"
+          unexpected="$(printf '%s\n' "$needed" | grep -Ev '^lib(c|m|pthread|dl|rt|resolv|util|gcc_s|stdc\+\+|atomic)\.so(\..*)?$' || true)"
+          if [ -n "$unexpected" ]; then
+            printf 'Non-system shared dependencies remain:\n%s\n' "$unexpected" >&2
+            exit 1
+          fi
 
       - name: Collect artifact
         run: |
