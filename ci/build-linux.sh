@@ -68,7 +68,7 @@ if [ ! -f "$prefix/lib/libavcodec.a" ]; then
         --disable-gpl --enable-version3 --disable-doc --disable-programs \
         --disable-everything --enable-network \
         --enable-avutil --enable-avcodec --enable-avfilter --enable-avformat \
-        --enable-swscale --enable-swresample --enable-libdav1d --enable-libmbedtls \
+        --enable-swscale --enable-swresample --enable-libdav1d --enable-mbedtls \
         --enable-small --enable-bsfs --enable-hwaccels \
         --enable-decoder=flv,h263,h263i,h263p,h264,mpeg1video,mpeg2video,mpeg4,vp6,vp6a,vp6f,vp8,vp9,hevc,av1,libdav1d,theora,msmpeg4v1,msmpeg4v2,msmpeg4v3,mjpeg,wmv1,wmv2,wmv3 \
         --enable-decoder=aac,ac3,alac,als,ape,eac3,flac,mp1,mp2,mp3,opus,vorbis,wavpack,wmav1,wmav2,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le \
