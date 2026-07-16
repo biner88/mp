@@ -103,7 +103,8 @@ fi
 
 if [ ! -f "$prefix/lib/libass.a" ]; then
     clone https://github.com/libass/libass.git libass 0.17.4
-    meson_build "$sources/libass" libass -Dfontconfig=disabled
+    meson_build "$sources/libass" libass \
+        -Dfontconfig=disabled -Drequire-system-font-provider=false
 fi
 
 if [ ! -f "$prefix/lib/libplacebo.a" ]; then
