@@ -3,7 +3,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 build="$root/build-ios"
-deps="$build/deps"
+deps_root="$build/deps"
 artifact="$root/artifact-ios"
 version=v0.7.0
 archive="libmpv-xcframeworks_${version}_ios-universal-video-default.tar.gz"
@@ -12,17 +12,20 @@ download_cache="${DARWIN_DOWNLOAD_CACHE:-$build}"
 tarball="$download_cache/$archive"
 
 rm -rf "$build" "$artifact"
-mkdir -p "$deps/xcf" "$deps/lib/pkgconfig" "$deps/include" "$artifact" "$download_cache"
+mkdir -p "$deps_root/xcf" "$artifact" "$download_cache"
 [ -s "$tarball" ] || curl -fL --retry 3 "$url" -o "$tarball"
-tar -xzf "$tarball" --strip-components=1 -C "$deps/xcf"
+tar -xzf "$tarball" --strip-components=1 -C "$deps_root/xcf"
 
-for xcf in "$deps/xcf"/*.xcframework; do
-    name="$(basename "$xcf" .xcframework)"
-    binary="$(find "$xcf/ios-arm64" -maxdepth 3 -type f -name "$name" -print -quit 2>/dev/null || true)"
-    [ -n "$binary" ] || continue
-    lower="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
-    cp "$binary" "$deps/lib/lib${lower}.dylib"
-    cat >"$deps/lib/pkgconfig/lib${lower}.pc" <<EOF
+stage_deps() {
+    local slice=$1 deps=$2 xcf name binary lower subdir source
+    mkdir -p "$deps/lib/pkgconfig" "$deps/include"
+    for xcf in "$deps_root/xcf"/*.xcframework; do
+        name="$(basename "$xcf" .xcframework)"
+        binary="$(find "$xcf/$slice" -maxdepth 3 -type f -name "$name" -print -quit 2>/dev/null || true)"
+        [ -n "$binary" ] || continue
+        lower="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+        cp "$binary" "$deps/lib/lib${lower}.dylib"
+        cat >"$deps/lib/pkgconfig/lib${lower}.pc" <<EOF
 prefix=$deps
 libdir=\${prefix}/lib
 includedir=\${prefix}/include
@@ -32,19 +35,16 @@ Version: 999
 Libs: -L\${libdir} -l${lower}
 Cflags: -I\${includedir}
 EOF
-done
-
-for subdir in libavcodec libavfilter libavformat libavutil libswresample libswscale ass; do
-    source="/opt/homebrew/include/$subdir"
-    [ -d "$source" ] || continue
-    mkdir -p "$deps/include/$subdir"
-    cp "$source"/*.h "$deps/include/$subdir/"
-done
-cp -RL "$(brew --prefix libplacebo)/include/libplacebo" "$deps/include/"
-
-# The media-kit iOS profile does not compile a libplacebo renderer, but mpv's
-# configure step still checks its version.
-cat >"$deps/lib/pkgconfig/libplacebo.pc" <<EOF
+    done
+    for subdir in libavcodec libavfilter libavformat libavutil libswresample libswscale ass; do
+        source="$(brew --prefix)/include/$subdir"
+        [ -d "$source" ] || continue
+        mkdir -p "$deps/include/$subdir"
+        cp "$source"/*.h "$deps/include/$subdir/"
+    done
+    cp -RL "$(brew --prefix libplacebo)/include/libplacebo" "$deps/include/"
+    # This media-kit profile has no libplacebo renderer, but mpv checks its version.
+    cat >"$deps/lib/pkgconfig/libplacebo.pc" <<EOF
 prefix=$deps
 includedir=\${prefix}/include
 Name: libplacebo
@@ -53,10 +53,17 @@ Version: 7.360.1
 Libs:
 Cflags: -I\${includedir}
 EOF
+}
 
-sdk="$(xcrun --sdk iphoneos --show-sdk-path)"
-cross="$build/ios.ini"
-cat >"$cross" <<EOF
+stage_deps ios-arm64 "$deps_root/device"
+stage_deps ios-arm64_x86_64-simulator "$deps_root/simulator"
+
+build_mpv() {
+    local name=$1 sdk_name=$2 arch=$3 cpu_family=$4 target=$5 deps=$6
+    local sdk cross
+    sdk="$(xcrun --sdk "$sdk_name" --show-sdk-path)"
+    cross="$build/$name.ini"
+    cat >"$cross" <<EOF
 [binaries]
 c = '$(xcrun -f clang)'
 cpp = '$(xcrun -f clang++)'
@@ -68,34 +75,27 @@ strip = '$(xcrun -f strip)'
 pkg-config = 'pkg-config'
 
 [built-in options]
-c_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-I$deps/include']
-c_link_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-L$deps/lib']
-cpp_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-I$deps/include']
-cpp_link_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-L$deps/lib']
-objc_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-I$deps/include']
-objc_link_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-L$deps/lib']
-objcpp_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-I$deps/include']
-objcpp_link_args = ['-arch', 'arm64', '-isysroot', '$sdk', '-miphoneos-version-min=12.0', '-L$deps/lib']
+c_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-I$deps/include']
+c_link_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-L$deps/lib']
+cpp_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-I$deps/include']
+cpp_link_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-L$deps/lib']
+objc_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-I$deps/include']
+objc_link_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-L$deps/lib']
+objcpp_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-I$deps/include']
+objcpp_link_args = ['-target', '$target', '-arch', '$arch', '-isysroot', '$sdk', '-L$deps/lib']
 
 [host_machine]
 system = 'darwin'
-cpu_family = 'aarch64'
-cpu = 'aarch64'
+cpu_family = '$cpu_family'
+cpu = '$arch'
 endian = 'little'
 
 [properties]
 needs_exe_wrapper = true
 pkg_config_libdir = '$deps/lib/pkgconfig'
 EOF
-
-meson_backup="$build/meson.build"
-cp "$root/meson.build" "$meson_backup"
-restore_meson() { cp "$meson_backup" "$root/meson.build"; }
-trap restore_meson EXIT
-sed -i.bak -E "s/version: '[^']+'/version: '>= 1.0'/g" "$root/meson.build"
-
-export PKG_CONFIG_PATH="$deps/lib/pkgconfig"
-meson setup "$build/mpv" --cross-file="$cross" --buildtype=release \
+    PKG_CONFIG_PATH="$deps/lib/pkgconfig" meson setup "$build/$name" \
+        --cross-file="$cross" --buildtype=release \
     -Ddefault_library=shared -Dlibmpv=true \
     -Dcplayer=false -Dtests=false -Dgpl=false \
     -Dcplugins=disabled -Dlua=disabled -Djavascript=disabled \
@@ -113,19 +113,41 @@ meson setup "$build/mpv" --cross-file="$cross" --buildtype=release \
     -Dpulse=disabled -Dalsa=disabled -Doss-audio=disabled \
     -Dsndio=disabled -Dopenal=disabled -Dopensles=disabled \
     -Daaudio=disabled -Dwasapi=disabled
-meson compile -C "$build/mpv" mpv
-strip -x "$build/mpv/libmpv.dylib"
+    meson compile -C "$build/$name" mpv
+    strip -x "$build/$name/libmpv.dylib"
+}
+
+meson_backup="$build/meson.build"
+cp "$root/meson.build" "$meson_backup"
+restore_meson() { cp "$meson_backup" "$root/meson.build"; }
+trap restore_meson EXIT
+sed -i.bak -E "s/version: '[^']+'/version: '>= 1.0'/g" "$root/meson.build"
+
+build_mpv device iphoneos arm64 aarch64 arm64-apple-ios12.0 "$deps_root/device"
+build_mpv simulator-arm64 iphonesimulator arm64 aarch64 arm64-apple-ios12.0-simulator "$deps_root/simulator"
+build_mpv simulator-x86_64 iphonesimulator x86_64 x86_64 x86_64-apple-ios12.0-simulator "$deps_root/simulator"
+mkdir -p "$build/simulator"
+lipo -create "$build/simulator-arm64/libmpv.dylib" \
+    "$build/simulator-x86_64/libmpv.dylib" \
+    -output "$build/simulator/libmpv.dylib"
 
 xcodebuild -create-xcframework \
-    -library "$build/mpv/libmpv.dylib" -headers "$root/include/mpv" \
+    -library "$build/device/libmpv.dylib" -headers "$root/include/mpv" \
+    -library "$build/simulator/libmpv.dylib" -headers "$root/include/mpv" \
     -output "$artifact/Mpv.xcframework"
-# upload-artifact skips the dylib symlinks created by xcodebuild. Store both
-# paths from Info.plist as regular files so the downloaded XCFramework works.
-slice="$artifact/Mpv.xcframework/ios-arm64"
-rm -f "$slice/libmpv.dylib" "$slice/libmpv.2.dylib"
-cp -L "$build/mpv/libmpv.2.dylib" "$slice/libmpv.2.dylib"
-cp "$slice/libmpv.2.dylib" "$slice/libmpv.dylib"
-for xcf in "$deps/xcf"/*.xcframework; do
+# upload-artifact skips dylib symlinks, so store both names as regular files.
+for pair in "ios-arm64:$build/device/libmpv.2.dylib" \
+            "ios-arm64_x86_64-simulator:$build/simulator/libmpv.dylib"; do
+    slice="${pair%%:*}"
+    source="${pair#*:}"
+    dir="$artifact/Mpv.xcframework/$slice"
+    rm -f "$dir/libmpv.dylib" "$dir/libmpv.2.dylib"
+    cp -L "$source" "$dir/libmpv.2.dylib"
+    cp "$dir/libmpv.2.dylib" "$dir/libmpv.dylib"
+done
+for xcf in "$deps_root/xcf"/*.xcframework; do
     [ "$(basename "$xcf")" = Mpv.xcframework ] || cp -R "$xcf" "$artifact/"
 done
-file "$build/mpv/libmpv.dylib"
+file "$build/device/libmpv.dylib" "$build/simulator/libmpv.dylib"
+test "$(lipo -archs "$build/simulator/libmpv.dylib")" = "x86_64 arm64" \
+    -o "$(lipo -archs "$build/simulator/libmpv.dylib")" = "arm64 x86_64"

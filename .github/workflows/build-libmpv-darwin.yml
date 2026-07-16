@@ -72,8 +72,48 @@ jobs:
           path: artifact
           if-no-files-found: error
 
+  macos-universal:
+    name: macOS arm64_x86_64
+    needs: macos
+    runs-on: macos-15
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: libmpv-macos-arm64
+          path: slices/arm64
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: libmpv-macos-x86_64
+          path: slices/x86_64
+
+      - name: Create universal artifact
+        run: |
+          mkdir -p artifact/lib
+          cp -R slices/arm64/include artifact/
+          lipo -create slices/arm64/libmpv.dylib slices/x86_64/libmpv.dylib \
+            -output artifact/libmpv.dylib
+          for arm in slices/arm64/lib/*.dylib; do
+            name="$(basename "$arm")"
+            test -f "slices/x86_64/lib/$name"
+            lipo -create "$arm" "slices/x86_64/lib/$name" \
+              -output "artifact/lib/$name"
+          done
+          for intel in slices/x86_64/lib/*.dylib; do
+            test -f "slices/arm64/lib/$(basename "$intel")"
+          done
+          test "$(lipo -archs artifact/libmpv.dylib)" = "x86_64 arm64" \
+            -o "$(lipo -archs artifact/libmpv.dylib)" = "arm64 x86_64"
+          otool -L artifact/libmpv.dylib
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libmpv-macos-arm64_x86_64
+          path: artifact
+          if-no-files-found: error
+
   ios:
-    name: iOS arm64
+    name: iOS device + simulator
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
@@ -93,6 +133,6 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: libmpv-ios-arm64-xcframeworks
+          name: libmpv-ios-arm64_x86_64-xcframeworks
           path: artifact-ios
           if-no-files-found: error
