@@ -119,6 +119,12 @@ strip -x "$build/mpv/libmpv.dylib"
 xcodebuild -create-xcframework \
     -library "$build/mpv/libmpv.dylib" -headers "$root/include/mpv" \
     -output "$artifact/Mpv.xcframework"
+# upload-artifact skips the dylib symlinks created by xcodebuild. Store both
+# paths from Info.plist as regular files so the downloaded XCFramework works.
+slice="$artifact/Mpv.xcframework/ios-arm64"
+rm -f "$slice/libmpv.dylib" "$slice/libmpv.2.dylib"
+cp -L "$build/mpv/libmpv.2.dylib" "$slice/libmpv.2.dylib"
+cp "$slice/libmpv.2.dylib" "$slice/libmpv.dylib"
 for xcf in "$deps/xcf"/*.xcframework; do
     [ "$(basename "$xcf")" = Mpv.xcframework ] || cp -R "$xcf" "$artifact/"
 done
