@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: [master, main]
+    paths-ignore:
+      - .github/workflows/build-libmpv.yml
+      - .github/workflows/build-libmpv-darwin.yml
+      - ci/build-ios.sh
 
 permissions:
   contents: read
@@ -44,7 +48,7 @@ jobs:
         run: |
           mkdir -p sdk
           ln -s "$ANDROID_HOME" sdk/android-sdk-linux
-          ./include/download-deps.sh
+          TRAVIS=1 ./download.sh
           rm -rf deps/mpv
           ln -s "$GITHUB_WORKSPACE" deps/mpv
 

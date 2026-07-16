@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: [master, main]
+    paths-ignore:
+      - .github/workflows/build-libmpv.yml
+      - .github/workflows/build-libmpv-android.yml
+      - ci/build-mingw64.sh
 
 permissions:
   contents: read

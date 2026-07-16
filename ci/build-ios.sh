@@ -40,7 +40,7 @@ for subdir in libavcodec libavfilter libavformat libavutil libswresample libswsc
     mkdir -p "$deps/include/$subdir"
     cp "$source"/*.h "$deps/include/$subdir/"
 done
-cp -R /opt/homebrew/include/libplacebo "$deps/include/"
+cp -RL "$(brew --prefix libplacebo)/include/libplacebo" "$deps/include/"
 
 # The media-kit iOS profile does not compile a libplacebo renderer, but mpv's
 # configure step still checks its version.

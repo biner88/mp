@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches: [master, main]
+    paths-ignore:
+      - .github/workflows/build-libmpv-android.yml
+      - .github/workflows/build-libmpv-darwin.yml
+      - ci/build-ios.sh
 
 jobs:
   windows:
