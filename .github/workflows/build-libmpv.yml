@@ -53,10 +53,12 @@ jobs:
         run: |
           mkdir -p artifact/include/mpv
           "$TARGET-strip" -s mingw_build/libmpv-2.dll
+          if "$TARGET-objdump" -p mingw_build/libmpv-2.dll | \
+              grep -Eiq 'DLL Name: (libssp|libwinpthread)[^ ]*\.dll'; then
+            echo 'MinGW runtime DLL dependency remains' >&2
+            exit 1
+          fi
           cp mingw_build/libmpv-2.dll mingw_build/libmpv.dll.a artifact/
-          find /usr/lib/gcc/$TARGET /usr/$TARGET/lib \
-            \( -name 'libwinpthread-1.dll' -o -name 'libssp-0.dll' \) \
-            -exec cp -v {} artifact/ \;
           cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v7
