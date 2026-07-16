@@ -27,8 +27,8 @@ export AR=$TARGET-ar
 export NM=$TARGET-nm
 export RANLIB=$TARGET-ranlib
 
-export CFLAGS="-O2 -pipe -Wall"
-export LDFLAGS="-fstack-protector-strong -static-libgcc -static-libstdc++"
+export CFLAGS="-O3 -flto -pipe -Wall"
+export LDFLAGS="-flto -fstack-protector-strong -static-libgcc -static-libstdc++"
 
 . ./ci/build-common.sh
 
@@ -52,6 +52,8 @@ buildtype = 'release'
 wrap_mode = 'nodownload'
 default_library = 'static'
 prefer_static = true
+b_lto = true
+optimization = '3'
 [binaries]
 c = ['ccache', '${CC}']
 cpp = ['ccache', '${CXX}']
@@ -82,6 +84,7 @@ cmake_args=(
     -DCMAKE_RC_COMPILER="${TARGET}-windres"
     -DCMAKE_ASM_COMPILER="$AS"
     -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     -DBUILD_SHARED_LIBS=OFF
 )
 
@@ -203,13 +206,25 @@ _ffmpeg () {
     builddir ffmpeg
     local args=(
         --pkg-config=pkg-config --pkg-config-flags=--static
-        --target-os=mingw32 --enable-gpl
+        --target-os=mingw32 --disable-gpl --enable-version3
         --enable-cross-compile --cross-prefix=$TARGET- --arch=${TARGET%%-*}
         --cc="$CC" --cxx="$CXX" $at_flags
-        --disable-{doc,programs}
-        --enable-muxer=spdif --enable-encoder=mjpeg,png --enable-libdav1d
+        --disable-everything --disable-{doc,programs,vulkan,iconv}
+        --enable-{avutil,avcodec,avfilter,avformat,avdevice,swscale,swresample}
+        --enable-{small,network,hwaccels,bsfs,lto}
+        --enable-libdav1d
+        --enable-decoder=flv,h263,h263i,h263p,h264,mpeg1video,mpeg2video,mpeg4,vp6,vp6a,vp6f,vp8,vp9,hevc,av1,libdav1d,theora,msmpeg4v1,msmpeg4v2,msmpeg4v3,mjpeg,wmv1,wmv2,wmv3
+        --enable-decoder=aac,ac3,alac,als,ape,atrac1,atrac3,atrac3al,atrac3p,atrac3pal,eac3,flac,gsm,gsm_ms,mp1,mp2,mp3,mpc7,mpc8,opus,ra_144,ra_288,ralf,shorten,tak,tta,vorbis,wavpack,wmalossless,wmapro,wmav1,wmav2,wmavoice,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,dsd_lsbf,dsd_msbf,dca
+        --enable-decoder=ssa,ass,dvbsub,dvdsub,srt,stl,subrip,subviewer,subviewer1,text,vplayer,webvtt,movtext
+        --enable-decoder=ljpeg,jpegls,jpeg2000,png,gif,bmp,tiff,webp
+        --enable-demuxer=concat,data,flv,hls,latm,live_flv,loas,m4v,mov,mpegps,mpegts,mpegvideo,hevc,rtsp,mjpeg,avi,av1,matroska,dash,webm_dash_manifest
+        --enable-demuxer=aac,ac3,aiff,ape,asf,au,flac,mp3,mpc,mpc8,ogg,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,rm,shorten,tak,tta,wav,wv,xwma,dsf,truehd,dts,dtshd
+        --enable-demuxer=ass,srt,stl,webvtt,subviewer,subviewer1,vplayer
+        --enable-parser=h263,h264,hevc,mpeg4video,mpegvideo,aac,aac_latm,ac3,cook,flac,gsm,mpegaudio,tak,vorbis,dca
+        --enable-filter=overlay,equalizer
+        --enable-protocol=async,cache,crypto,data,ffrtmphttp,file,ftp,hls,http,httpproxy,https,pipe,rtmp,rtmps,rtmpt,rtmpts,rtp,subfile,tcp,tls,srt
+        --enable-encoder=mjpeg,ljpeg,jpegls,jpeg2000,png
     )
-    pkg-config vulkan && args+=(--enable-vulkan)
     ../configure "${args[@]}"
     makeplusinstall
     popd
@@ -364,7 +379,7 @@ if [[ "$TARGET" != "i686-"* ]]; then
     build_if_missing vulkan-headers
     build_if_missing vulkan-loader
 fi
-for x in ffmpeg libplacebo freetype fribidi harfbuzz libass luajit curl; do
+for x in ffmpeg libplacebo freetype fribidi harfbuzz libass curl; do
     build_if_missing $x
 done
 if [[ "$TARGET" != "i686-"* ]]; then
@@ -392,7 +407,11 @@ mpv_args=(
     --force-fallback-for=mujs
     -Dmujs:werror=false
     -Dmujs:default_library=static
-    -Dlua=luajit
+    -Dlua=disabled
+    -Dgpl=false
+    -Db_lto=true
+    -Doptimization=3
+    -Dopenal=disabled
     -D{amf,shaderc,spirv-cross,d3d11,javascript,libcurl}=enabled
 )
 [[ "$1" == libmpv ]] && mpv_args+=( -Dcplayer=false -Dtests=false )
