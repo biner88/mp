@@ -23,6 +23,11 @@ jobs:
           key: libmpv-windows-x64-${{ hashFiles('ci/build-mingw64.sh') }}
           restore-keys: libmpv-windows-x64-
 
+      - uses: actions/cache@v6
+        with:
+          path: mingw_prefix
+          key: libmpv-windows-prefix-${{ hashFiles('ci/build-mingw64.sh') }}
+
       - name: Install build tools
         run: |
           rustup target add "$RUST_TARGET"
@@ -37,14 +42,15 @@ jobs:
           meson wrap install mujs
           meson subprojects download
 
-      - name: Build dependencies
-        run: bash ./ci/build-mingw64.sh
-
       - name: Build libmpv
         run: bash ./ci/build-mingw64.sh libmpv
 
       - name: Collect artifact
-        run: meson install -C mingw_build --destdir "$GITHUB_WORKSPACE/artifact"
+        run: |
+          mkdir -p artifact/include/mpv
+          "$TARGET-strip" -s mingw_build/libmpv-2.dll
+          cp mingw_build/libmpv-2.dll mingw_build/libmpv.dll.a artifact/
+          cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v7
         with:

@@ -238,7 +238,8 @@ _shaderc () {
     fi
     builddir shaderc
     cmake .. "${cmake_args[@]}" \
-        -DBUILD_SHARED_LIBS=OFF -DSHADERC_SKIP_TESTS=ON
+        -DBUILD_SHARED_LIBS=OFF -DSHADERC_SKIP_TESTS=ON \
+        -DSHADERC_SKIP_EXECUTABLES=ON
     makeplusinstall
     popd
 }
@@ -379,7 +380,7 @@ if [[ "$TARGET" != "i686-"* ]]; then
     build_if_missing vulkan-headers
     build_if_missing vulkan-loader
 fi
-for x in ffmpeg libplacebo freetype fribidi harfbuzz libass curl; do
+for x in ffmpeg libplacebo freetype fribidi harfbuzz libass; do
     build_if_missing $x
 done
 if [[ "$TARGET" != "i686-"* ]]; then
@@ -412,11 +413,16 @@ mpv_args=(
     -Db_lto=true
     -Doptimization=3
     -Dopenal=disabled
-    -D{amf,shaderc,spirv-cross,d3d11,javascript,libcurl}=enabled
+    -D{amf,shaderc,spirv-cross,d3d11,javascript}=enabled
+    -Dlibcurl=disabled
 )
 [[ "$1" == libmpv ]] && mpv_args+=( -Dcplayer=false -Dtests=false )
 meson setup $build "${mpv_args[@]}"
-meson compile -C $build
+if [[ "$1" == libmpv ]]; then
+    meson compile -C $build mpv
+else
+    meson compile -C $build
+fi
 
 if [ "$2" = pack ]; then
     mkdir -p artifact/tmp
