@@ -60,8 +60,8 @@ jobs:
           cp flavors/default.sh scripts/ffmpeg.sh
           cat >scripts/libplacebo.sh <<'LIBPLACEBO'
           #!/bin/bash -e
-          . "$BUILDSCRIPTS_ROOT/include/depinfo.sh"
-          . "$BUILDSCRIPTS_ROOT/include/path.sh"
+          . ../../include/depinfo.sh
+          . ../../include/path.sh
           build=_build$ndk_suffix
           if [ "$1" = clean ]; then
             rm -rf "$build"
