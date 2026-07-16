@@ -238,6 +238,7 @@ _shaderc () {
     fi
     builddir shaderc
     cmake .. "${cmake_args[@]}" \
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
         -DBUILD_SHARED_LIBS=OFF -DSHADERC_SKIP_TESTS=ON \
         -DSHADERC_SKIP_EXECUTABLES=ON
     makeplusinstall
@@ -249,6 +250,7 @@ _spirv_cross () {
     [ -d SPIRV-Cross ] || $gitclone https://github.com/KhronosGroup/SPIRV-Cross
     builddir SPIRV-Cross
     cmake .. "${cmake_args[@]}" \
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
         -DSPIRV_CROSS_SHARED=OFF -DSPIRV_CROSS_CLI=OFF -DSPIRV_CROSS_STATIC=ON
     makeplusinstall
     popd
