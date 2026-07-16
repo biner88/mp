@@ -45,6 +45,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
             autoconf automake cmake libtool meson nasm ninja-build pkgconf
+          python3 -m pip install --upgrade meson
 
       - name: Prepare Android dependencies
         working-directory: android-build/buildscripts
