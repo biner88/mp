@@ -14,8 +14,16 @@ permissions:
 
 jobs:
   macos:
-    name: macOS arm64
-    runs-on: macos-15
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x86_64
+            runner: macos-15-intel
     steps:
       - uses: actions/checkout@v7
 
@@ -45,11 +53,12 @@ jobs:
           cp build-macos/libmpv.dylib artifact/
           cp include/mpv/*.h artifact/include/mpv/
           file artifact/libmpv.dylib
+          file artifact/libmpv.dylib | grep -q "${{ matrix.arch }}"
           otool -L artifact/libmpv.dylib
 
       - uses: actions/upload-artifact@v7
         with:
-          name: libmpv-macos-arm64
+          name: libmpv-macos-${{ matrix.arch }}
           path: artifact
           if-no-files-found: error
 
