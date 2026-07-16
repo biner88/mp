@@ -53,6 +53,7 @@ jobs:
           ln -s "$ANDROID_HOME" sdk/android-sdk-linux
           TRAVIS=1 ./download.sh
           cp flavors/default.sh scripts/ffmpeg.sh
+          sed -i '/--prefer-static/d' scripts/mpv.sh
           rm -rf deps/mpv
           cp -a "$GITHUB_WORKSPACE/mpv-source" deps/mpv
 
