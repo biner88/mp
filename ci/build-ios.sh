@@ -42,17 +42,6 @@ EOF
         mkdir -p "$deps/include/$subdir"
         cp "$source"/*.h "$deps/include/$subdir/"
     done
-    cp -RL "$(brew --prefix libplacebo)/include/libplacebo" "$deps/include/"
-    # This media-kit profile has no libplacebo renderer, but mpv checks its version.
-    cat >"$deps/lib/pkgconfig/libplacebo.pc" <<EOF
-prefix=$deps
-includedir=\${prefix}/include
-Name: libplacebo
-Description: configure-only stub
-Version: 7.360.1
-Libs:
-Cflags: -I\${includedir}
-EOF
 }
 
 stage_deps ios-arm64 "$deps_root/device"
@@ -104,7 +93,8 @@ EOF
     -Dsdl2-gamepad=disabled -Dsdl2-video=disabled -Dzimg=disabled \
     -Dvapoursynth=disabled -Dcoreaudio=disabled -Davfoundation=disabled \
     -Daudiounit=enabled -Dcocoa=disabled -Dgl-cocoa=disabled \
-    -Dgl=disabled -Dvulkan=disabled -Dmacos-cocoa-cb=disabled \
+    -Dgl=disabled -Dvulkan=disabled -Dlibplacebo=disabled \
+    -Dmacos-cocoa-cb=disabled \
     -Dmacos-media-player=disabled -Dmacos-touchbar=disabled \
     -Dios-gl=disabled -Dvideotoolbox-gl=disabled \
     -Dlibcurl=disabled -Dx11=disabled -Dx11-clipboard=disabled \
@@ -115,6 +105,11 @@ EOF
     -Daaudio=disabled -Dwasapi=disabled
     meson compile -C "$build/$name" mpv
     strip -x "$build/$name/libmpv.dylib"
+    # libplacebo 未随 iOS 包发布，任何残留 _pl_* 符号都会导致应用在 dyld 阶段崩溃。
+    if nm -u "$build/$name/libmpv.dylib" | grep -q '_pl_'; then
+        echo "Unexpected unresolved libplacebo symbols in $name" >&2
+        exit 1
+    fi
 }
 
 meson_backup="$build/meson.build"
