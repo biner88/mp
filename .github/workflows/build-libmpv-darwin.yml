@@ -118,25 +118,32 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/cache@v6
+      - uses: actions/checkout@v7
         with:
-          path: .cache/libmpv-darwin
-          key: libmpv-ios-dependencies-v0.7.0
+          repository: media-kit/libmpv-darwin-build
+          ref: b4e3ce98826cd4a28f6121b29f56ea203346e6e3
+          path: libmpv-darwin-build
 
-      - name: Install build dependencies
-        run: |
-          brew install ffmpeg libass meson ninja pkg-config
-          python3 -m venv .venv
-          .venv/bin/pip install jinja2
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - uses: DeterminateSystems/nix-installer-action@v22
+        with:
+          extra-conf: |
+            sandbox = true
+            sandbox-fallback = false
+
+      - uses: DeterminateSystems/magic-nix-cache-action@v13
+        with:
+          use-flakehub: false
 
       - name: Build libmpv
-        env:
-          DARWIN_DOWNLOAD_CACHE: ${{ github.workspace }}/.cache/libmpv-darwin
-        run: bash ./ci/build-ios.sh
+        working-directory: libmpv-darwin-build
+        run: |
+          make \
+            XCODE_PATH="$(realpath /Applications/Xcode.app)" \
+            VERSION="${GITHUB_SHA::7}" \
+            TARGET=mk-out-archive-xcframeworks-ios-universal-video-default
 
       - uses: actions/upload-artifact@v7
         with:
           name: libmpv-ios-arm64_x86_64-xcframeworks
-          path: artifact-ios
+          path: libmpv-darwin-build/result/libmpv-xcframeworks_*_ios-universal-video-default.tar.gz
           if-no-files-found: error
