@@ -59,6 +59,7 @@ jobs:
           ln -s "$ANDROID_HOME" sdk/android-sdk-linux
           sed -i "s/^v_ndk=.*/v_ndk=$NDK_VERSION/" include/depinfo.sh
           TRAVIS=1 ./download.sh
+          sed -i '/^#define MBEDTLS_AESCE_C$/d' deps/mbedtls/include/mbedtls/mbedtls_config.h
           cp flavors/default.sh scripts/ffmpeg.sh
           cat >scripts/libplacebo.sh <<'LIBPLACEBO'
           #!/bin/bash -e
