@@ -54,6 +54,9 @@ jobs:
           mkdir -p artifact/include/mpv
           "$TARGET-strip" -s mingw_build/libmpv-2.dll
           cp mingw_build/libmpv-2.dll mingw_build/libmpv.dll.a artifact/
+          find /usr/lib/gcc/$TARGET /usr/$TARGET/lib \
+            \( -name 'libwinpthread-1.dll' -o -name 'libssp-0.dll' \) \
+            -exec cp -v {} artifact/ \;
           cp include/mpv/*.h artifact/include/mpv/
 
       - uses: actions/upload-artifact@v7
