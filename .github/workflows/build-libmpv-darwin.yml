@@ -139,7 +139,7 @@ jobs:
             sandbox = true
             sandbox-fallback = false
 
-      - uses: DeterminateSystems/magic-nix-cache-action@v13
+      - uses: DeterminateSystems/magic-nix-cache-action@v14
         with:
           use-flakehub: false
 
